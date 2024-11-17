@@ -40,7 +40,7 @@ export const TransactionForm: React.FC = () => {
             value={merchant}
             onChange={(e) => setMerchant(e.target.value)}
             className="w-full rounded-md border-gray-300 shadow-sm px-4 py-2"
-            placeholder="Enter merchant name"
+            placeholder="Enter merchant name!"
             disabled={processing}
           />
         </div>
