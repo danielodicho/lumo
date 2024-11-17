@@ -1,76 +1,100 @@
-import React from 'react';
-import { Receipt, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import React, { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 import { format } from 'date-fns';
+import { Trash2 } from 'lucide-react';
 
 export const TransactionHistory: React.FC = () => {
-  const { transactions, participants } = useStore();
+  const { transactions, fetchTransactions, deleteTransaction } = useStore();
 
-  const getParticipantName = (id: string) => {
-    return participants.find(p => p.id === id)?.name || 'Unknown';
-  };
+  useEffect(() => {
+    fetchTransactions().catch(console.error);
+  }, [fetchTransactions]);
 
-  const getStatusIcon = (status: string, error?: string | null) => {
-    if (error) {
-      return <AlertCircle size={16} className="text-orange-500" title={error} />;
-    }
-    
-    switch (status) {
-      case 'succeeded':
-      case 'completed':
-        return <CheckCircle size={16} className="text-green-500" />;
-      case 'failed':
-        return <XCircle size={16} className="text-red-500" />;
-      default:
-        return <Clock size={16} className="text-yellow-500" />;
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+    } catch (error) {
+      console.error('Failed to delete transaction:', error);
+      // You might want to show a toast notification here
     }
   };
+
+  const getParticipantName = (participant: any): string => {
+    if (!participant) return 'Unknown';
+    if (typeof participant === 'string') return participant;
+    if (typeof participant === 'object' && participant.name) return participant.name;
+    if (typeof participant === 'object' && participant._id) return participant._id;
+    return 'Unknown';
+  };
+
+  if (transactions.length === 0) {
+    return (
+      <div className="p-4 text-center text-gray-500">
+        No transactions yet
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-2xl font-bold mb-4">Transaction History</h2>
-      
+    <div className="space-y-4">
+      <h2 className="text-xl font-bold mb-4">Transaction History</h2>
       <div className="space-y-4">
-        {transactions.map((transaction) => (
-          <div
-            key={transaction.id}
-            className="border rounded-lg p-4 space-y-3"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Receipt size={20} className="text-blue-500" />
-                <span className="font-medium">{transaction.merchantName}</span>
-                {getStatusIcon(transaction.status)}
-              </div>
-              <span className="text-sm text-gray-500">
-                {format(transaction.date, 'MMM d, yyyy HH:mm')}
-              </span>
-            </div>
-            
-            <div className="text-lg font-bold">
-              ${transaction.totalAmount.toFixed(2)}
-            </div>
-            
-            <div className="space-y-2">
-              <div className="text-sm font-medium text-gray-500">Split Details:</div>
-              {transaction.splits.map((split, index) => (
-                <div key={index} className="flex justify-between items-center text-sm">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(split.status, split.error)}
-                    <span>{getParticipantName(split.participantId)}</span>
-                  </div>
-                  <span>${split.amount.toFixed(2)}</span>
+        {transactions.map((transaction) => {
+          console.log('Rendering transaction:', transaction);
+          return (
+            <div
+              key={transaction.groupTransactionId}
+              className="bg-white rounded-lg shadow p-4"
+            >
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="font-semibold">{transaction.merchantName}</h3>
+                  <p className="text-sm text-gray-500">
+                    {format(new Date(transaction.createdAt), 'MMM d, yyyy h:mm a')}
+                  </p>
                 </div>
-              ))}
+                <div className="flex items-start gap-4">
+                  <div className="text-right">
+                    <p className="font-semibold">${transaction.totalAmount.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">{transaction.splitInfo}</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      console.log('Deleting transaction with id:', transaction._id);
+                      handleDelete(transaction._id);
+                    }}
+                    className="text-red-500 hover:text-red-600 p-1"
+                    title="Delete transaction"
+                  >
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 space-y-2">
+                {transaction.participantPayments.map((payment) => (
+                  <div
+                    key={payment.paymentIntentId}
+                    className="flex justify-between items-center text-sm"
+                  >
+                    <span>{getParticipantName(payment.participant)}</span>
+                    <div className="flex items-center space-x-2">
+                      <span>${payment.amount.toFixed(2)}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${
+                        payment.status === 'succeeded' 
+                          ? 'bg-green-100 text-green-800'
+                          : payment.status === 'failed'
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {payment.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-        
-        {transactions.length === 0 && (
-          <div className="text-center text-gray-500 py-8">
-            No transactions yet
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );

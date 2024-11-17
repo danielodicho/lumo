@@ -1,5 +1,6 @@
 import { loadStripe } from '@stripe/stripe-js';
-import { PaymentIntent } from '../types';
+import axios from 'axios';
+import { PaymentIntent } from '../types/types';
 
 // Initialize Stripe with test key
 const stripePromise = loadStripe('pk_test_your_key');
@@ -26,36 +27,49 @@ const getRandomScenario = () => {
   return SIMULATION_SCENARIOS.SUCCESS;
 };
 
-export const processPayment = async (
-  amount: number,
-  participantId: string
-): Promise<PaymentIntent> => {
-  // Simulate network delay (500-1500ms)
-  await new Promise(resolve => 
-    setTimeout(resolve, 500 + Math.random() * 1000)
-  );
+const API_URL = 'http://localhost:3001'; // Local development backend URL
 
-  const scenario = getRandomScenario();
-  
-  // Simulate different payment scenarios
-  switch (scenario) {
-    case SIMULATION_SCENARIOS.INSUFFICIENT_FUNDS:
-      throw new Error('Insufficient funds');
-      
-    case SIMULATION_SCENARIOS.CARD_DECLINED:
-      throw new Error('Card declined');
-      
-    case SIMULATION_SCENARIOS.NETWORK_ERROR:
-      throw new Error('Network error');
-      
-    case SIMULATION_SCENARIOS.SUCCESS:
-    default:
-      return {
-        id: crypto.randomUUID(),
-        status: 'succeeded',
-        amount,
-        participantId,
-        error: null,
-      };
+export const processPayment = async (
+  participantId: string,
+  paymentMethodId: string,
+  amount: number,
+  merchantName: string,
+  participantName: string,
+  splitInfo: string,
+  groupTransactionId: string
+): Promise<any> => {
+  // Simulate network delay
+  await new Promise((resolve) => setTimeout(resolve, Math.random() * 1000 + 500));
+
+  const requestData = {
+    paymentMethodId,
+    amount,
+    merchantName,
+    participantName,
+    splitInfo,
+    groupTransactionId
+  };
+
+  console.log('Sending payment request:', {
+    url: `${API_URL}/api/participants/${participantId}/process-payment`,
+    data: requestData
+  });
+
+  try {
+    const response = await axios.post(
+      `${API_URL}/api/participants/${participantId}/process-payment`,
+      requestData,
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    console.log('Payment response:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Payment processing failed:', error);
+    throw error;
   }
 };

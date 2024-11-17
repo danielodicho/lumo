@@ -2,6 +2,24 @@ export interface Participant {
   id: string;
   name: string;
   pledgedAmount: number;
+  stripeCustomerId?: string;
+  defaultPaymentMethodId?: string;
+  card?: {
+    brand: string;
+    last4: string;
+    expiryMonth: number;
+    expiryYear: number;
+  };
+}
+
+export interface Actions {
+  fetchParticipants: () => Promise<void>;
+  addParticipant: (name: string, pledgedAmount: number, paymentMethodId: string) => Promise<void>;
+  removeParticipant: (id: string) => Promise<void>;
+  updatePledge: (id: string, amount: number) => void;
+  processTransaction: (merchantName: string, amount: number) => Promise<void>;
+  toggleParticipantSelection: (participantId: string) => void;
+  clearSelectedParticipants: () => void;
 }
 
 export interface Transaction {
@@ -33,3 +51,4 @@ export interface PaymentIntent {
   participantId: string;
   error: string | null;
 }
+
